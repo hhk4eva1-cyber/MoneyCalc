@@ -45,7 +45,7 @@ margin-bottom: 15px;
 .month-nav {
 display: flex;
 align-items: center;
-gap: 5px;
+gap: 15px;
 }
 
 .nav-btn {
@@ -56,7 +56,7 @@ padding: 0 5px;
 }
 
 .monthly-label {
-font-size: 16px;
+font-size: 14px;
 text-align: right;
 color: #AAAAAA;
 margin-bottom: 5px;
@@ -68,7 +68,7 @@ justify-content: space-between;
 align-items: baseline;
 font-size: 32px;
 font-weight: bold;
-cursor: pointer; /* Tap to edit monthly budget */
+cursor: pointer;
 }
 
 .weekdays {
@@ -132,13 +132,13 @@ font-size: 50px;
 font-weight: bold;
 display: flex;
 align-items: center;
+cursor: pointer; /* Tap anywhere on daily amount to edit allowance */
 }
 
 .starting-label {
-font-size: 18px;
+font-size: 15px;
 color: #FFFFFF;
-margin-left: 10px;
-height: 3px;
+margin-left: 12px;
 font-weight: normal;
 }
 
@@ -219,8 +219,8 @@ cursor: pointer;
 
 <!-- Bottom Selected Day Area -->
 <div class="bottom-section">
-<div class="daily-amount">
-<span id="daily-remaining">$0.00</span> 
+<div class="daily-amount" onclick="editDailyLimit()" title="Tap to edit daily allowance">
+<span id="daily-remaining">$0.00</span>
 <span class="starting-label" id="starting-label"></span>
 </div>
 
@@ -229,7 +229,7 @@ cursor: pointer;
 </ul>
 
 <button class="btn-setup" id="btn-set-daily" onclick="setDailyLimit()" style="display: none;">
-Set Daily Starting Amount
+Set Daily Allowance
 </button>
 <button class="btn-add" id="btn-add-purchase" onclick="addPurchase()">
 + Add Purchase
@@ -239,20 +239,20 @@ Set Daily Starting Amount
 <script>
 // --- CALENDAR STATE ---
 const monthNames = [
-"January", "February", "March", "April", "May", "June", 
+"January", "February", "March", "April", "May", "June",
 "July", "August", "September", "October", "November", "December"
 ];
 
 let currentDate = new Date();
 let currentYear = currentDate.getFullYear();
-let currentMonth = currentDate.getMonth(); // 0 - 11
+let currentMonth = currentDate.getMonth();
 let selectedDay = currentDate.getDate();
 
 // Load data from phone's local storage
 let appData = JSON.parse(localStorage.getItem('budgetAppData')) || {
-monthlyLimits: {}, 
-dailyLimits: {},  
-purchases: {}  
+monthlyLimits: {},
+dailyLimits: {},
+purchases: {}
 };
 
 function saveData() {
@@ -321,7 +321,7 @@ calendarEl.innerHTML += `<div></div>`;
 
 for (let day = 1; day <= daysInMonth; day++) {
 let dateKey = getDateKey(day);
-let hasData = (appData.dailyLimits[dateKey] !== undefined || 
+let hasData = (appData.dailyLimits[dateKey] !== undefined ||
 (appData.purchases[dateKey] && appData.purchases[dateKey].length > 0)) ? 'has-data' : '';
 let isSelected = (day === selectedDay) ? 'selected' : '';
 
@@ -343,12 +343,7 @@ let totalDailyPurchases = dailyPurchases.reduce((a, b) => a + b, 0);
 if (dailyStarting !== undefined) {
 let dailyRemaining = dailyStarting - totalDailyPurchases;
 document.getElementById('daily-remaining').innerText = `$${dailyRemaining.toFixed(2)}`;
-
-if (totalDailyPurchases === 0) {
 document.getElementById('starting-label').innerText = 'Daily Allowance';
-} else {
-document.getElementById('starting-label').innerText = '';
-}
 
 document.getElementById('btn-set-daily').style.display = 'none';
 document.getElementById('btn-add-purchase').style.display = 'block';
@@ -379,8 +374,9 @@ updateUI();
 }
 
 function setMonthlyLimit() {
-let limit = prompt(`Enter budget limit for ${monthNames[currentMonth]} ${currentYear}:`);
-if (limit && !isNaN(limit)) {
+let currentLimit = appData.monthlyLimits[getMonthKey()] || '';
+let limit = prompt(`Enter budget limit for ${monthNames[currentMonth]} ${currentYear}:`, currentLimit);
+if (limit !== null && !isNaN(limit) && limit !== "") {
 appData.monthlyLimits[getMonthKey()] = parseFloat(limit);
 saveData();
 updateUI();
@@ -388,17 +384,27 @@ updateUI();
 }
 
 function setDailyLimit() {
-let limit = prompt(`Enter starting limit for ${monthNames[currentMonth]} ${selectedDay}:`);
-if (limit && !isNaN(limit)) {
-appData.dailyLimits[getDateKey(selectedDay)] = parseFloat(limit);
+let selectedDateKey = getDateKey(selectedDay);
+let currentLimit = appData.dailyLimits[selectedDateKey] !== undefined ? appData.dailyLimits[selectedDateKey] : '';
+let limit = prompt(`Enter daily allowance for ${monthNames[currentMonth]} ${selectedDay}:`, currentLimit);
+if (limit !== null && !isNaN(limit) && limit !== "") {
+appData.dailyLimits[selectedDateKey] = parseFloat(limit);
 saveData();
 updateUI();
 }
 }
 
+function editDailyLimit() {
+let selectedDateKey = getDateKey(selectedDay);
+// Only allow editing via tap on daily amount if an allowance has already been set
+if (appData.dailyLimits[selectedDateKey] !== undefined) {
+setDailyLimit();
+}
+}
+
 function addPurchase() {
 let amount = prompt("Enter purchase amount:");
-if (amount && !isNaN(amount)) {
+if (amount !== null && !isNaN(amount) && amount !== "") {
 let dateKey = getDateKey(selectedDay);
 if (!appData.purchases[dateKey]) {
 appData.purchases[dateKey] = [];
